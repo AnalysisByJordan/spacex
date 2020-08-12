@@ -1,0 +1,137 @@
+.main-div{
+    background-color: rgb(33, 34, 37);
+}
+.Tab_One{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+.gen-info{
+background-color: rgb(79, 81, 88);
+margin-top: 20px;
+margin-bottom: 20px;
+padding: 10px 0px 10px 0px;
+}
+
+.graph-grid{
+    display: grid;
+grid-template-columns: 30vw 30vw 30vw;
+  column-gap: 10px;
+  row-gap: 15px;
+  justify-content: center;
+}
+
+.info{
+    padding-right: 55px;
+    position: relative;
+    left: 55px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.info-div{
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+}
+.video-page{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+.info-num{
+    border: 5px solid white;
+    background: white;
+    width: 50px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: black;
+}
+.video-dropdown{
+    color:black;
+}
+
+.selection_row{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 25vh;
+    text-align: center;
+}
+.selection-box{
+    border-style: solid;
+    padding: 20px;
+    background: black;
+}
+.middle-space{
+    width: 100px;
+}
+
+.mission_selection{
+    display: flex;
+    flex-direction: row;
+}
+.launch_year_dropdown{
+    width: 200px;
+}
+.mission_dropdown{
+    width: 200px;
+}
+.lower-half{
+    display: flex;
+    justify-content: center;
+    flex-direction: row;
+    width: 99vw;
+}
+.video-div{
+    width: 45%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /*background: red;*/
+}
+.middle-piece{
+    width: 10%;
+}
+.video-details{
+    width: 45%;
+}
+.mission_video{
+    width: 100%;
+    height: 50vh;
+}
+.detail-block{
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 30px;
+    width: 40%;
+}
+.detail-var{
+    color: rgb(139, 139, 139);
+}
+.card-divs{
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+    height: 80%;
+}
+.mission-h1{
+    text-align: center;
+}
+.dt-div{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+.bot-div{
+    height: 10vh;
+}

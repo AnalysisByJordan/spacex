@@ -16,89 +16,18 @@ import numpy as np
 import time
 import requests_cache
 
-requests_cache.install_cache('spacex_cache', backend='sqlite')
+important_df = pd.read_pickle(r'C:\Users\steelmaster95\OneDrive\Programming\Data_Science\Python\spacex_app_v2\data_df.pkl')
 
-url = "https://api.spacexdata.com/v3/launches"
-data = requests.get(url)
-data_dict = data.json()
+#Basic Launches Information
+completed_missions = important_df[important_df.upcoming == False].flight_number.count()
+upcoming_missions = important_df[important_df.upcoming == True].flight_number.count()
+landing_intent_missions = important_df[important_df.landing_intent == True].flight_number.count()
+land_success_missions = important_df[important_df.land_success == True].flight_number.count()
 
-# Condensing info from json into a useable/relevant dataframe----------------------------------------------
-useable_list = []
-useful_fields = ['flight_number', 'mission_name', 'upcoming', 'launch_year', 'launch_date_unix', 
-                 'launch_date_utc','launch_date_local', 'is_tentative', 'launch_success', 'details']
-for i in range(len(data_dict)):
-    useable_dict = {}
-    for field in useful_fields:
-        useable_dict[field] = data_dict[i][field]
-    useable_dict['rocket_name'] = data_dict[i]['rocket']['rocket_name']
-    useable_dict['rocket_type'] = data_dict[i]['rocket']['rocket_type']
-    useable_dict['video_link'] = data_dict[i]['links']['video_link']
-    for key in data_dict[i]['rocket']['first_stage']['cores'][0].keys():
-        useable_dict[key] = data_dict[i]['rocket']['first_stage']['cores'][0][key]
-    pay_list = []
-    for key in data_dict[i]['rocket']['second_stage']['payloads'][0].keys():
-        pay_list.append(key)
-    pay_list.remove('orbit_params')
-    for key in pay_list:
-        useable_dict[key] = data_dict[i]['rocket']['second_stage']['payloads'][0][key]
-    for key in data_dict[i]['rocket']['second_stage']['payloads'][0]['orbit_params'].keys():
-        useable_dict[key] = data_dict[i]['rocket']['second_stage']['payloads'][0]['orbit_params'][key]
-    if data_dict[i]['rocket']['fairings'] is not None:
-        for key in data_dict[i]['rocket']['fairings'].keys():
-            useable_dict[key] = data_dict[i]['rocket']['fairings'][key]
-    else:
-        for key in data_dict[0]['rocket']['fairings'].keys():
-            useable_dict[key] = np.nan
-    for key in data_dict[i]['launch_site'].keys():
-        useable_dict[key] = data_dict[i]['launch_site'][key]
-    if data_dict[i]['launch_success'] == False:
-        for key in data_dict[i]['launch_failure_details'].keys():
-            useable_dict[key] = data_dict[i]['launch_failure_details'][key]
-    else:
-        for key in data_dict[0]['launch_failure_details'].keys():
-            useable_dict[key] = np.nan   
-    useable_list.append(useable_dict)
-
-important_df = pd.DataFrame.from_dict(useable_list)
-
-#getting longitude/latitude from Wikipedia API---------------------------------------------
-def coord_get(location):
-    URL = "https://en.wikipedia.org/w/api.php"
-    
-    TITLE_PARAMS = {
-    "action": "query",
-    "format": "json",
-    "list": "search",
-    "srsearch": location
-    }
-    TITLE_R = requests.get(url=URL, params=TITLE_PARAMS)
-    TITLE_DATA = TITLE_R.json()
-    title = TITLE_DATA['query']['search'][0]['title']
-    
-
-    LOC_PARAMS = {
-    "action": "query",
-    "format": "json",
-    "titles": title,
-    "prop": "coordinates"
-    }
-    LOC_R = requests.get(url=URL, params=LOC_PARAMS)
-    LOC_DATA = LOC_R.json()
-    PAGES = LOC_DATA['query']['pages']
-    
-    for k, v in PAGES.items():
-        lat = v['coordinates'][0]['lat']
-        long = v['coordinates'][0]['lon']
-    
-    time.sleep(.2)
-    return {'lat' : lat, 'long': long}
-
-
-coord_list = []
-for site in important_df.site_name_long:
-    coord_list.append(coord_get(site))
-
-important_df['coords'] = coord_list
+#graph styling variables
+plot_color = 'rgb(62, 64, 70)'
+paper_color = 'rgb(62, 64, 70)'
+font_dict = dict(size=14, color= 'rgb(198, 200, 209)')
 
 unique_locations = important_df.site_name_long.unique()
 geo_dict = {}
@@ -136,13 +65,16 @@ fig0.update_layout(
         bearing=0,
         center=dict(
             lat=8.71,
-            lon=-167.73
+            lon=-130.73
         ),
         pitch=0,
         zoom=1
     ),
-    title = 'Location of SpaceX Launches',
-    template = "seaborn"
+    title = 'Location and Quantity of SpaceX Launches',
+    template = "seaborn",
+    paper_bgcolor = paper_color,
+    plot_bgcolor = plot_color,
+    font= font_dict
 )
 
 
@@ -170,7 +102,10 @@ fig1 = go.Figure(data=[
 fig1.update_layout(
     barmode='stack',
     title = 'Rocket Launch Success/Failures Over Time',
-    template = "seaborn"
+    template = "seaborn",
+    paper_bgcolor = paper_color,
+    plot_bgcolor = plot_color,
+    font= font_dict
     )
 
 
@@ -190,6 +125,11 @@ customers_df = pd.DataFrame.from_dict(data = customers_dict, orient = 'index', c
 
 fig2 = px.pie(customers_df, values='Launches', names=customers_df.index, title='SpaceX Customers and Number of Launches')
 fig2.update_traces(textposition='inside', textinfo='percent+label')
+fig2.update_layout(
+    paper_bgcolor = paper_color,
+    plot_bgcolor = plot_color,
+    font = dict(color= 'rgb(198, 200, 209)')
+    )
 
 #Launches by Nation----------------------------------------------------------------------------
 nations = important_df.nationality
@@ -203,10 +143,26 @@ for item in unique_nations:
 nations_df = pd.DataFrame.from_dict(data = nations_dict, orient = 'index', columns = ['Nations'])
 fig3 = px.pie(nations_df, values='Nations', names=nations_df.index, title='Nation Launches')
 fig3.update_traces(textposition='inside', textinfo='percent+label')
+fig3.update_layout(
+    paper_bgcolor = paper_color,
+    plot_bgcolor = plot_color,
+    font = dict(size=14, color= 'rgb(198, 200, 209)')
+    )
 
 
 #Creating dictionary for video viewing. Altering nomenclature in video links to include 'embed'...
-video_df = important_df.loc[important_df['video_link'].notnull(), ['mission_name', 'video_link']]
+video_df = important_df.loc[important_df['video_link'].notnull(), ['launch_year','mission_name', 'video_link','is_tentative', 'launch_success', 
+'details', 'landing_intent', 'land_success', 'landing_type', 'landing_vehicle', 'nationality', 'manufacturer', 
+'payload_id', 'payload_type', 'payload_mass_lbs', 'reference_system', 'semi_major_axis_km', 'eccentricity',
+'periapsis_km','apoapsis_km','inclination_deg','period_min','lifespan_years','regime', 'site_name_long']]
+
+video_df_items = ['is_tentative', 'launch_success', 
+'details', 'landing_intent', 'land_success', 'landing_type', 'landing_vehicle', 'nationality', 'manufacturer', 
+'payload_id', 'payload_type', 'payload_mass_lbs', 'reference_system']
+#,'semi_major_axis_km', 'eccentricity',
+#'periapsis_km','apoapsis_km','inclination_deg','period_min','lifespan_years','regime', 'site_name_long'
+
+
 
 def youtube_link(word):
     if 'feature' in word:
@@ -233,89 +189,208 @@ def youtube_link(word):
 video_df['video_link'] = video_df['video_link'].map(youtube_link)
 first_video_df = video_df.rename({'mission_name' : 'label', 'video_link': 'value'}, axis = 'columns')
 first_video_dict = first_video_df.to_dict('records')
+video_dict = video_df.groupby('launch_year').apply(lambda s: s.drop('launch_year', 1).to_dict('records')).to_dict()
+
+#Row creation function for individual mission data
+def cardDiv(updateVar):
+    return html.Div(className = 'detail-block', children = [
+                html.Div(className = 'detail-var', children = updateVar),
+                html.Div(id = updateVar)
+            ])
+
+cardDivs = []
+for item in video_df_items:
+    cardDivs.append(cardDiv(item))
+
+def callbackOutputs(idVar):
+    return Output(idVar, 'children')
+
+missionCallbacks = []
+for item in video_df_items:
+    missionCallbacks.append(callbackOutputs(item))
+
+#manufacturer - orbit graph creation
+manufacturer_reference = important_df[['manufacturer', 'orbit']]
+manufacturers = manufacturer_reference.manufacturer.unique()
+manufacturers = [i for i in manufacturers if i] 
+orbits = manufacturer_reference.orbit.unique()
+orbits_dict = {}
+for item in manufacturers:
+    orbits_dict[item] = {}
+    for orbit in orbits:
+        orbits_dict[item][orbit] =  manufacturer_reference[(manufacturer_reference.manufacturer == item) & (manufacturer_reference.orbit == orbit)].orbit.count()
 
 
 
-
-
-#App Building------------------------------------------------------------------------------------
-app = dash.Dash(external_stylesheets=[dbc.themes.SUPERHERO])
-app.layout = html.Div(children = [
+#App Construction-----------------------------------------------------------------------------------
+app = dash.Dash(external_stylesheets=[dbc.themes.CYBORG])
+app.layout = html.Div(className = 'main-div', children = [
     html.H1('SpaceX Dashboard', style = {'textAlign': 'center'}),
     dbc.Tabs(children = [
         dbc.Tab(label='General Metrics', children=[    
             html.Div([
-                dbc.Row([
-                    dbc.Col([
+                html.Div([
+                    html.Div([
                         html.H1("General Information", style = {'textAlign': 'center'}),
                         html.Div(
-                        [   html.Div([html.P("Completed Missions: "), html.Div("95", className = 'info-num')], className = 'info'),
-                            html.Div([html.P("Planned Missions Coming Up: "), html.Div("13", className = 'info-num')], className = 'info'),
-                            html.Div([html.P("Number of Misions with a Landing Intent: "), html.Div("40", className = 'info-num')], className = 'info'),
-                            html.Div([html.P("Number of Missions with a Successful Land: "), html.Div("20", className = 'info-num')], className = 'info'),
+                        [   html.Div([html.P("Completed Missions: "), html.Div(completed_missions, className = 'info-num')], className = 'info'),
+                            html.Div([html.P("Planned Missions Coming Up: "), html.Div(upcoming_missions, className = 'info-num')], className = 'info'),
+                            html.Div([html.P("Number of Misions with a Landing Intent: "), html.Div(landing_intent_missions, className = 'info-num')], className = 'info'),
+                            html.Div([html.P("Number of Missions with a Successful Land: "), html.Div(land_success_missions, className = 'info-num')], className = 'info'),
                         ], className = 'info-div'),
-                    ], width = {"size": 8, "offset": 2}, className = 'gen-info')
+                    ], className = 'gen-info')
                 ]),
-                dbc.Row(
+                html.Div(className = 'graph-grid', children = 
                     [
-                        dbc.Col(dcc.Graph(figure = fig1), width = 4),
-                        dbc.Col(dcc.Graph(figure = fig2), width = 4),
-                        dbc.Col(dcc.Graph(figure = fig3), width = 4)
-                    ]),
-                dbc.Row(dbc.Col(dcc.Graph(figure = fig0), width = 4, style = {'height' : '100px'}), 
-                    style = {
-                        "paddingTop": "10px",
-                        "paddingLeft": "10px"
-                        })
-            ]),
+                        html.Div(dcc.Graph(figure = fig1), className = 'small_graph'),
+                        html.Div(dcc.Graph(figure = fig2), className = 'small_graph'),
+                        html.Div(dcc.Graph(figure = fig3), className = 'small_graph'),
+                        html.Div(dcc.Graph(figure = fig0), className = 'small_graph'), 
+                        html.Div(className = 'manu_dropdown', children = [
+                            dbc.Label("Choose a Manufacturer", html_for = "orbit_manu_dd"),
+                            dcc.Dropdown(
+                                options = [{'label': k, 'value': k} for k in manufacturers], id = 'orbit_manu_dd', value = 'SpaceX')
+                        ]),
+                    html.Div(dcc.Graph(id='manu_graph'), className = 'large_graph')
+                ]),
+            ], className = "Tab_One"),
         ]),
         dcc.Tab(label='Launch Visuals', className = 'custom-tab', selected_className = 'custom-tab--selected', children=[  
             html.Div(className = 'video-page', children = [
-                dbc.Row([
-                    dbc.Col([
-                        html.H2("Please Choose A Mission"), 
-                        dcc.Dropdown(className = 'video-dropdown', id='options', options=first_video_dict),])
+                html.Div(className = 'selection_row', children = [
+                    html.Div(className = 'selection-box', children = [
+                        html.H2("Mission Selection"),
+                        html.Div(className = "mission_selection", children = [
+                            html.Div(className = 'launch_year_dropdown', children = [
+                                dbc.Label("Choose a Launch Year", html_for = "launches_years"), 
+                                dcc.Dropdown(className = 'video-dropdown', id='launches_years', options=[{'label': k, 'value': k} for k in video_dict.keys()], value = '2016'),
+                            ]),
+                            html.Div(className = 'middle-space'),
+                            html.Div(className = 'mission_dropdown', children = [
+                                dbc.Label("Choose a Mission", html_for = "missions"), 
+                                dcc.Dropdown(className = 'video-dropdown', id = 'missions', value = 'SES-9')
+                            ]),
+                        ])
+                    ])
                 ]),
-                dbc.Row([dbc.Col([html.Iframe(id='frame', src=None)])
-                ])
+                html.Div(className = 'lower-half', children = [
+                    html.Div(className = 'video-div', children = [
+                        html.H2('Mission Video'),
+                        html.Iframe(className = "mission_video", id='frame', src=None)
+                    ]),
+                    html.Div(className = 'middle-piece'),
+                    html.Div(className = 'video-details', children = [
+                        html.H2(className = 'mission-h1', children = 'Mission Details'),
+                        html.Div(className = 'card-divs', children = cardDivs),
+                    ]),
+                ]),
             ])
         ]),
         dcc.Tab(label='Raw Data', className = 'custom-tab', selected_className = 'custom-tab--selected', children=[
-            html.P('Explore the raw data'),
-            dash_table.DataTable(
-                id='table',
-                columns=[{"name": i, "id": i} for i in important_df.columns],
-                data=important_df.to_dict('records'),
-                style_cell = {
-                    'overflow': 'hidden',
-                    'textOverflow': 'ellipsis',
-                    'maxWidth': 0,
-                    'minWidth': '180px', 'width': '180px', 'maxWidth': '180px',
-                },
-                style_table = {
-                    'overflowX': 'auto',
-                    'overflowY': 'auto',
-                    'max_height': '600px',
-                    'max_width': '800px'
-                },
-                tooltip_data=[
-                { column: {'value': str(value), 'type': 'markdown'}
-                    for column, value in row.items()
-                } for row in important_df.to_dict('rows')
-            ],
-            tooltip_duration=None
-        ),
+            html.Div(className = 'dt-div', children = [
+                html.H2('Explore the raw data'),
+                dash_table.DataTable(
+                    id='table',
+                    columns=[{"name": i, "id": i} for i in important_df.columns],
+                    data=important_df.to_dict('records'),
+                    style_cell = {
+                        'overflow': 'hidden',
+                        'textOverflow': 'ellipsis',
+                        'maxWidth': 0,
+                        'minWidth': '180px', 'width': '180px', 'maxWidth': '180px',
+                        'color': 'white',
+                        'backgroundColor': 'rgb(79, 81, 88)'
+                    },
+                    style_table = {
+                        'overflowX': 'auto',
+                        'overflowY': 'auto',
+                        'max_height': '80vh',
+                        'max_width': '95vw'
+                    },
+                    style_header={
+                        'backgroundColor': 'rgb(58, 60, 65)',
+                        'fontWeight': 'bold'
+                    },
+                    tooltip_data=[
+                        { column: {'value': str(value), 'type': 'markdown'}
+                            for column, value in row.items()
+                        } for row in important_df.to_dict('rows')
+                    ],
+                    tooltip_duration=None
+                ),
+                html.Div(className = 'bot-div')
+            ])
         ])
     ])
 ])
 
 @app.callback(
-    Output('frame', 'src'),
-    [Input('options', 'value')]
+    Output('manu_graph', 'figure'),
+    [Input('orbit_manu_dd', 'value')]
 )
-def change_video(option):
-    return option
+def select_orbit_manu(selected_manu):
+    df = pd.DataFrame.from_dict(orbits_dict[selected_manu], orient='index', columns = ['Launch Contracts'])
+    df['Orbit Type'] = df.index
+    fig = px.bar(df, x = 'Orbit Type', y = 'Launch Contracts', title = 'Payload Manufacturer vs. Orbit Type')
+    fig.update_layout(
+    paper_bgcolor = paper_color,
+    plot_bgcolor = plot_color,
+    font = dict(size=14, color= 'rgb(198, 200, 209)')
+    )
+    return fig
 
+@app.callback(
+    Output('missions', 'options'),
+    [Input('launches_years', 'value')]
+)
+def select_mission(selected_year):
+    return [{'label': v['mission_name'], 'value' : v['mission_name']} for v in video_dict[selected_year]]
+
+@app.callback(
+    Output('frame', 'src'),
+    [Input('missions', 'value'),
+    Input('launches_years', 'value')]
+)
+def select_video(mission_value, year_value):
+    for key in video_dict[year_value]:
+        if key['mission_name'] == mission_value:
+            src = key['video_link']
+    return src
+
+@app.callback(
+    [Output('is_tentative', 'children'),
+    Output('launch_success', 'children'),
+    Output('details', 'children'),
+    Output('landing_intent', 'children'),
+    Output('land_success', 'children'),
+    Output('landing_type', 'children'),
+    Output('landing_vehicle', 'children'),
+    Output('nationality', 'children'),
+    Output('manufacturer', 'children'),
+    Output('payload_id', 'children'),
+    Output('payload_type', 'children'),
+    Output('payload_mass_lbs', 'children'),
+    Output('reference_system', 'children')],
+    [Input('missions', 'value'),
+    Input('launches_years', 'value')]
+)
+def missionDetail(mission_value, year_value):
+    for key in video_dict[year_value]:
+        if key['mission_name'] == mission_value:
+            tentativeVar = key['is_tentative']
+            successVar = key['launch_success']
+            failReasonVar = key['details']
+            intentVar = key['landing_intent']
+            landSucVar = key['land_success']
+            landTypeVar = key['landing_type']
+            landVehVar = key['landing_vehicle']
+            nationVar = key['nationality']
+            manuVar = key['manufacturer']
+            payIdVar = key['payload_id']
+            payTypeVar = key['payload_type']
+            payMassVar = key['payload_mass_lbs']
+            referenceVar = key['reference_system']
+    return "{}".format(tentativeVar), "{}".format(successVar), "{}".format(failReasonVar), "{}".format(intentVar), "{}".format(landSucVar), "{}".format(landTypeVar), "{}".format(landVehVar), "{}".format(nationVar), "{}".format(manuVar), "{}".format(payIdVar), "{}".format(payTypeVar), "{}".format(payMassVar), "{}".format(referenceVar),
 
 if __name__ == '__main__':
     app.run_server(debug=True)
